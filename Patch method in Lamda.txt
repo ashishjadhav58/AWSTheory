@@ -1,0 +1,27 @@
+  if(method=="PATCH" && path.includes("/api")){
+            const data=JSON.parse(event.body);
+            const getdata=await doc.send(new GetCommand({TableName:db,Key:{email:data.email}}))
+            await doc.send(new DeleteCommand({TableName:db,Key:{email:data.email}}))
+            const newdata={
+                ...getdata.Item,
+                name:data.name,
+            }
+            await doc.send(new PutCommand({TableName:db,Item:newdata}))
+            return{
+                statusCode:200,
+                headers,
+                body:JSON.stringify({message:"Successfully updated"})
+            }
+        }
+		//Another Way
+		
+	if(method=="PATCH" && path.includes("/api")){
+            const data=JSON.parse(event.body);
+            await doc.send(new UpdateCommand({TableName:db,Key:{email:data.email},UpdateExpression:"set #n= :n",ExpressionAttributeNames:{"#n":"name"},ExpressionAttributeValues:{":n":data.name},ReturnValues:"UPDATED_NEW"},))
+           // UpdateExpression:"set #n=:n,password=:p" , ExpressionAttributeNames:{"#n":"name"},ExpressionAttributeValues:{":n":data.name,":p":data.password}
+            return {
+                statusCode:200,
+                headers,
+                body:JSON.stringify({message:"Successfully update name"})
+            }
+         }

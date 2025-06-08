@@ -1,0 +1,9 @@
+ if(method=="GET" && path.includes("/api")){
+            const data = JSON.parse(event.body)
+            const response = await doc.send(new GetCommand({TableName:db,Key:{email:data.email}}))
+            return{
+                statusCode : 200,
+                headers,
+                body:JSON.stringify(response.Items)
+            }
+        }

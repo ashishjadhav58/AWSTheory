@@ -1,0 +1,9 @@
+if(method=="DELETE" && path.includes("/api")){
+            const data = JSON.parse(event.body);
+            await doc.send(new DeleteCommand({TableName:db,Key :{email:data.email}}))
+            return{
+                statusCode : 200,
+                headers,
+                body:JSON.stringify({Message:"Deleted Successfully"})
+            }
+        }

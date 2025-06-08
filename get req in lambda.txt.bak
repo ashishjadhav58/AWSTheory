@@ -1,0 +1,30 @@
+import { DynamoDBClient, ScanCommand } from "@aws-sdk/client-dynamodb"
+import { DynamoDBDocumentClient, PutCommand } from "@aws-sdk/lib-dynamodb"
+const dbclient = new DynamoDBClient(); // client is create to send req to dynamodb
+const docclient = DynamoDBDocumentClient.from(dbclient) //wrap cleint to work with js
+const table = "Tpdb" // table name
+
+export const handler = async (event)=>{
+    try{
+        const httpmethod = event.httpMethod; // collect method of req 
+        const path = event.path; // collect path of req
+        if(path.endsWith('/userdata') && httpmethod == "GET"){ // if to check method is get and api ending
+            const data = await docclient.send(new ScanCommand({TableName : table})) // send scan command db to get data and data will be in data.items
+            return{
+                statusCode : 200,
+                headers :{
+                    "Content-Type":"application/json",
+                    "Access-Control-Allow-Origin":"*",
+                },
+                body:JSON.stringify(data.Items)
+            }
+        };
+    }
+    catch(err){
+ return {
+    statusCode: 500,
+    headers: { "Access-Control-Allow-Origin": "*" },
+    body: JSON.stringify({ error: error.message }),
+  };
+    }
+}

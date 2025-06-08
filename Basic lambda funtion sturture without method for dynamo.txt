@@ -1,0 +1,42 @@
+import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
+import { DynamoDBDocumentClient } from "@aws-sdk/lib-dynamodb";
+
+const client = new DynamoDBClient();
+const doc = DynamoDBDocumentClient.from(client)
+const db = "Tpdb"
+export const handler = async (event)=>{
+    const method = event.httpMethod;
+    const path = event.path;
+    try{
+        if(method == "OPTIONS"){
+            return{
+                statusCode:200,
+                headers:{
+                    "Access-Control-Allow-Origin":"*",
+                    "Access-Control-Allow-Method":"POST,GET,OPTION",
+                    "Access-Control-Allow-Header":"Content-Type",
+                },
+                body : JSON.stringify({message:"CORS preflight ok"})
+            }
+        }
+		
+		// method 
+        
+		return{
+            statusCode : 404,
+            headers:{
+                "Access-Control-Allow-Origin":"*",
+            },
+            body:JSON.stringify({Message:"File Not Found"})
+        }
+    }
+    catch(err){
+        return{
+            statusCode : 500,
+            headers :{
+                "Access-Control-Allow-Origin":"*",
+            },
+            body:JSON.stringify({error : err.message})
+        }
+    }
+}

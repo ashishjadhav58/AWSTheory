@@ -1,0 +1,44 @@
+import { PutObjectCommand, S3Client } from "@aws-sdk/client-s3"  // to communicate with s3 services // putobjectcommand to upload
+import { v4 } from "uuid" // generate unique id
+const s3 = new S3Client(); // object of s3
+const bucket = "ashish-upload-bucket"; // name of bucket
+export const handler = async(event)=>{
+     const headers = {
+    "Access-Control-Allow-Origin": "*",
+    "Access-Control-Allow-Methods": "POST,OPTIONS",
+    "Access-Control-Allow-Headers": "Content-Type",
+    "Content-Type": "application/json"
+  };
+  const path = event.path;
+  const method = event.httpMethod;
+  if (event.httpMethod === "OPTIONS") {
+    return { statusCode: 200, headers };
+  }
+  try{
+    if(method === "POST"){
+        const {filename , filetype , base64} = JSON.parse(event.body) // filename : image.png filetype: image/png file encoded in base64.
+        const buffer = Buffer.from(base64,"base64"); // convert base64 file into binary buffer
+        const key = `${v4()}-${filename}`  // this genrated unique file name  ex. af8d13ea-photo.png
+        await s3.send(new PutObjectCommand({
+            Bucket:bucket,  // bucket name
+            Key:key,  // unique key created
+            Body:buffer, // file which is converted to binary
+            ContentType:filetype, // file Type mime type
+            "ACL":"public-read" // this is attribute make file publically accessble via url
+        }));
+        const url = `https://${bucket}.s3.amazonaws.com/${key}`; // this url to accss data
+         return {
+      statusCode: 200,
+      headers,
+      body: JSON.stringify({ message: "Uploaded successfully", url })
+             };
+    }
+  }
+  catch(err){
+    return{
+        statusCode:500,
+        headers,
+        body:JSON.stringify({Error:err.message})
+    }
+  }
+}

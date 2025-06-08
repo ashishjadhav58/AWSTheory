@@ -1,0 +1,84 @@
+'use client'
+import { Button } from "@/components/ui/button";
+import axios from "axios";
+import React, { useState, FormEvent } from "react";
+
+const page: React.FC = () => {
+  const [file, setfile] = useState<File | null>(null);
+  const [email, setemail] = useState("ashishd@gmail.com");
+
+  const tobase64 = (file: File): Promise<string> =>
+    new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = () => {
+        if (typeof reader.result === "string") {
+          resolve(reader.result.split(",")[1]); // Remove prefix like data:image/...
+        } else {
+          reject("Failed to convert file");
+        }
+      };
+      reader.onerror = (error) => reject(error);
+    });
+
+  const handleSubmit = async (e: FormEvent) => {
+    e.preventDefault(); // Prevent form reload on submit
+
+    if (!file) {
+      alert("Please select a file");
+      return;
+    }
+
+    try {
+      const base64 = await tobase64(file);
+      const data = {
+        email: email,
+        filetype: file.type,
+        filename: file.name,
+        base64: base64,
+      };
+      console.log(data);
+      
+      await axios.post(
+        "https://745pv3j879.execute-api.us-east-1.amazonaws.com/prod/api/image",
+        data,
+        {
+          headers: {
+            "Content-Type": "application/json",
+          },
+        }
+      );
+      alert("Upload successful!");
+    } catch (err) {
+      alert("Upload failed!");
+      console.error(err);
+    }
+  };
+
+  return (
+    <div className="grid grid-cols-3">
+      <div></div>
+      <div>
+        <form className="text-center mt-5 bg-gray-100 p-5" onSubmit={handleSubmit}>
+          <input
+            className="w-full bg-white border border-red-100 text-center pr-5 mb-5 pl-5 h-15"
+            type="file"
+            name="file"
+            id=""
+            onChange={(e) => {
+              if (e.target.files) setfile(e.target.files[0]);
+            }}
+            placeholder="Upload file"
+          />
+          <br />
+          <Button variant="outline" type="submit">
+            Submit
+          </Button>
+        </form>
+      </div>
+      <div></div>
+    </div>
+  );
+};
+
+export default page;
