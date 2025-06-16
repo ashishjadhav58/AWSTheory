@@ -1,0 +1,435 @@
+to craete lambda function in AWS -->
+
+	1) go to aws 
+	2) seach lambda
+	3) create lambda function
+	4) set name to lambda funtion , choose language , auther from scratch 
+	5) click on create
+	
+	after --> 
+	
+	1) add trigger
+	2) create new api
+	3) select rest api
+	4) open (testing purpose)
+	5) click on add
+	6) succesful message will pop 
+	7) link on api gate way
+	8) copy end-point of api
+	
+						// In your Lambda function (e.g., index.mjs or index.js)
+					export const handler = async (event) => {
+					  // You would fetch your data here, e.g., from a database
+					  const sampleData = [
+						  {
+							  title: "Task 1",
+							  description: "Complete project documentation.",
+							  deadline: "2025-06-01"
+						  },
+						  {
+							  title: "Meeting Prep",
+							  description: "Prepare slides for stakeholder meeting.",
+							  deadline: "2025-05-28"
+						  },
+						  {
+							  title: "Code Review",
+							  description: "Review pull requests from team members.",
+							  deadline: "2025-05-30"
+						  }
+					  ];
+
+					  return {
+						  statusCode: 200,
+						  headers: {
+							  "Content-Type": "application/json",
+							  // IMPORTANT: Add CORS headers if your frontend is on a different domain
+							  "Access-Control-Allow-Origin": "*", // Or your specific frontend domain
+							  "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+							  "Access-Control-Allow-Headers": "Content-Type, X-Amz-Date, Authorization, X-Api-Key, X-Amz-Security-Token"
+						  },
+						  body: JSON.stringify(sampleData),
+					  };
+					}; 
+
+
+if you want to integrate with dynomo db then
+
+	1) open dynomo db
+	2) click on create table
+	3) give table some name
+	4) partition key id type string
+	5) leave optional one
+	6) select default setting
+	7) click on create table
+	
+	* now need Update our Lambda function's IAM role
+	
+	1) go to user lambda function
+	2) click on configuration button
+	3) left side slider will open click on permissions
+	4) after that click on role name
+	5) now roles page will open select add permission and choose attached polices
+	6) search AmazonDynamoDBFullAccess and select this
+	7) click on add permission
+	
+	* now need to change lambda function
+	
+	1) go to our lambda function 
+	2) click on code
+	
+	paste code --->
+	 example // Ensure you have the full code block, including imports and the handler function
+				import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
+				import { DynamoDBDocumentClient, PutCommand, ScanCommand } from "@aws-sdk/lib-dynamodb";
+
+				const client = new DynamoDBClient({});
+				const docClient = DynamoDBDocumentClient.from(client);
+
+				const TABLE_NAME = "MyUserData"; // IMPORTANT: Ensure this matches your DynamoDB table name
+
+				export const handler = async (event) => {
+					try {
+						const httpMethod = event.httpMethod;
+
+						if (httpMethod === 'POST') {
+							const requestBody = JSON.parse(event.body);
+							const id = Date.now().toString(); // Simple ID generation
+
+							const item = {
+								id: id,
+								title: requestBody.title,
+								description: requestBody.description,
+								deadline: requestBody.deadline,
+								createdAt: new Date().toISOString()
+							};
+
+							const putCommand = new PutCommand({
+								TableName: TABLE_NAME,
+								Item: item,
+							});
+
+							await docClient.send(putCommand);
+
+							return {
+								statusCode: 201,
+								headers: {
+									"Content-Type": "application/json",
+									"Access-Control-Allow-Origin": "*", // Or your specific frontend domain
+									"Access-Control-Allow-Methods": "POST, GET, OPTIONS",
+									"Access-Control-Allow-Headers": "Content-Type"
+								},
+								body: JSON.stringify({ message: "Item created successfully", id: id }),
+							};
+
+						} else if (httpMethod === 'GET') {
+							const scanCommand = new ScanCommand({
+								TableName: TABLE_NAME,
+							});
+
+							const { Items } = await docClient.send(scanCommand);
+
+							return {
+								statusCode: 200,
+								headers: {
+									"Content-Type": "application/json",
+									"Access-Control-Allow-Origin": "*",
+									"Access-Control-Allow-Methods": "POST, GET, OPTIONS",
+									"Access-Control-Allow-Headers": "Content-Type"
+								},
+								body: JSON.stringify(Items),
+							};
+
+						} else if (httpMethod === 'OPTIONS') {
+							return {
+								statusCode: 204,
+								headers: {
+									"Access-Control-Allow-Origin": "*",
+									"Access-Control-Allow-Methods": "POST, GET, OPTIONS",
+									"Access-Control-Allow-Headers": "Content-Type, X-Amz-Date, Authorization, X-Api-Key, X-Amz-Security-Token",
+									"Access-Control-Max-Age": "86400"
+								},
+								body: "",
+							};
+						}
+						else {
+							return {
+								statusCode: 405,
+								headers: {
+									"Content-Type": "application/json",
+									"Access-Control-Allow-Origin": "*",
+									"Access-Control-Allow-Methods": "POST, GET, OPTIONS",
+									"Access-Control-Allow-Headers": "Content-Type"
+								},
+								body: JSON.stringify({ message: "Method Not Allowed" }),
+							};
+						}
+
+					} catch (error) {
+						console.error("Error:", error);
+						return {
+							statusCode: 500,
+							headers: {
+								"Content-Type": "application/json",
+								"Access-Control-Allow-Origin": "*",
+								"Access-Control-Allow-Methods": "POST, GET, OPTIONS",
+								"Access-Control-Allow-Headers": "Content-Type"
+							},
+							body: JSON.stringify({ message: "Internal server error", error: error.message }),
+						};
+					}
+				};
+	
+	
+	now you can use code perfectly
+	
+* now if you want to intgerate with s3 bucket
+
+ now dynomo db process
+ 
+ 1) create new dynamo db table or change existing one
+ 2) open dynamo db and select our table
+ 3) click on export item tab
+ 4) click on any item display in lift bottom and select checkbox
+ 5) click on action and choose edit item
+ 6) now click on add attribute
+ 6) now select image_url as attribute name and type as string 
+ 8) click on save and close
+ 
+ now s3 bucket process
+ 
+ 1) go to s3
+ 2) select create bucket
+ 3) select general purpose
+ 4) set bucket name it should be unique
+ 5) select ACl's disable
+ 6) scroll down and to access
+ 7) uncheack Block all public access
+ 8) disable versioning
+ 9) click on create bucket
+ 
+ now Grant Lambda Permissions to Access S3 (Crucial!)
+ 
+	1) go to user lambda function
+	2) click on configuration button
+	3) left side slider will open click on permissions
+	4) after that click on role name
+	5) now roles page will open select add permission and choose attached polices
+	6) search AmazonS3FullAccess and select this
+	7) click on add permission
+ 
+ Modify Lambda Function Code to Generate Presigned URLs
+ 
+	1) go to lambda
+	2) click on code tab
+	3) upload code 
+	
+	example -->
+				// Make sure to install @aws-sdk/s3-request-presigner if you're deploying as a zip file
+			// npm install @aws-sdk/s3-request-presigner @aws-sdk/client-s3
+
+			import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
+			import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
+
+			import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
+			import { DynamoDBDocumentClient, PutCommand, ScanCommand } from "@aws-sdk/lib-dynamodb";
+
+			// Initialize clients
+			const s3Client = new S3Client({});
+			const dbClient = new DynamoDBClient({});
+			const docClient = DynamoDBDocumentClient.from(dbClient);
+
+			// *** IMPORTANT: REPLACE THESE WITH YOUR ACTUAL NAMES ***
+			const DYNAMODB_TABLE_NAME = "MyUserData";
+			const S3_BUCKET_NAME = "userdata-bucket-ashish"; // Your S3 bucket name from image_898987.png
+			// ******************************************************
+
+			export const handler = async (event) => {
+				try {
+					const httpMethod = event.httpMethod;
+					// The event.path often includes the stage name, like /default/userdata or /default/userdata/get-upload-url
+					const path = event.path;
+
+					// --- Handle GET request for Presigned URL ---
+					// Example path: /default/userdata/get-upload-url
+					if (httpMethod === 'GET' && path.endsWith('/get-upload-url')) {
+						const fileName = event.queryStringParameters?.fileName;
+						const fileType = event.queryStringParameters?.fileType;
+
+						if (!fileName || !fileType) {
+							return {
+								statusCode: 400,
+								headers: { "Access-Control-Allow-Origin": "*" },
+								body: JSON.stringify({ message: "fileName and fileType are required query parameters." }),
+							};
+						}
+
+						// Create a unique key for the S3 object (e.g., in an 'uploads' folder)
+						const objectKey = `uploads/<span class="math-inline">\{Date\.now\(\)\}\-</span>{fileName}`;
+
+						const command = new PutObjectCommand({
+							Bucket: S3_BUCKET_NAME,
+							Key: objectKey,
+							ContentType: fileType,
+							ACL: 'public-read' // Makes the uploaded object publicly readable
+						});
+
+						// Generate the presigned URL valid for 5 minutes (300 seconds)
+						const presignedUrl = await getSignedUrl(s3Client, command, { expiresIn: 300 });
+
+						return {
+							statusCode: 200,
+							headers: {
+								"Content-Type": "application/json",
+								"Access-Control-Allow-Origin": "*",
+								"Access-Control-Allow-Methods": "GET, POST, PUT, OPTIONS", // Added PUT
+								"Access-Control-Allow-Headers": "Content-Type, X-Amz-Date, Authorization, X-Api-Key, X-Amz-Security-Token"
+							},
+							body: JSON.stringify({ uploadUrl: presignedUrl, objectKey: objectKey }),
+						};
+					}
+
+					// --- Handle POST request for storing data in DynamoDB ---
+					// Example path: /default/userdata
+					if (httpMethod === 'POST' && path.endsWith('/userdata')) {
+						const requestBody = JSON.parse(event.body);
+						const id = Date.now().toString(); // Simple ID for now
+
+						const item = {
+							id: id,
+							title: requestBody.title,
+							description: requestBody.description,
+							deadline: requestBody.deadline,
+							createdAt: new Date().toISOString(),
+							image_url: requestBody.image_url // Now expecting image_url from frontend
+						};
+
+						const putCommand = new PutCommand({
+							TableName: DYNAMODB_TABLE_NAME,
+							Item: item,
+						});
+
+						await docClient.send(putCommand);
+
+						return {
+							statusCode: 201, // Created
+							headers: {
+								"Content-Type": "application/json",
+								"Access-Control-Allow-Origin": "*",
+								"Access-Control-Allow-Methods": "POST, GET, OPTIONS",
+								"Access-Control-Allow-Headers": "Content-Type"
+							},
+							body: JSON.stringify({ message: "Item created successfully", id: id }),
+						};
+					}
+
+					// --- Handle GET request for retrieving data from DynamoDB ---
+					// Example path: /default/userdata
+					if (httpMethod === 'GET' && path.endsWith('/userdata')) {
+						const scanCommand = new ScanCommand({
+							TableName: DYNAMODB_TABLE_NAME,
+						});
+
+						const { Items } = await docClient.send(scanCommand);
+
+						return {
+							statusCode: 200,
+							headers: {
+								"Content-Type": "application/json",
+								"Access-Control-Allow-Origin": "*",
+								"Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+								"Access-Control-Allow-Headers": "Content-Type"
+							},
+							body: JSON.stringify(Items), // Send all retrieved items
+						};
+					}
+
+					// --- Handle OPTIONS for CORS preflight ---
+					if (httpMethod === 'OPTIONS') {
+						return {
+							statusCode: 204, // No Content
+							headers: {
+								"Access-Control-Allow-Origin": "*",
+								"Access-Control-Allow-Methods": "POST, GET, PUT, OPTIONS", // Added PUT
+								"Access-Control-Allow-Headers": "Content-Type, X-Amz-Date, Authorization, X-Api-Key, X-Amz-Security-Token",
+								"Access-Control-Max-Age": "86400"
+							},
+							body: "",
+						};
+					}
+
+					// --- Default/Fallback for unhandled methods/paths ---
+					return {
+						statusCode: 405, // Method Not Allowed
+						headers: { "Access-Control-Allow-Origin": "*" },
+						body: JSON.stringify({ message: "Method Not Allowed or Invalid Path" }),
+					};
+
+				} catch (error) {
+					console.error("Error:", error);
+					return {
+						statusCode: 500,
+						headers: { "Access-Control-Allow-Origin": "*" },
+						body: JSON.stringify({ message: "Internal server error", error: error.message }),
+					};
+				}
+			};
+			
+			changes in front end 
+			
+			const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
+        if (e.target.files && e.target.files.length > 0) {
+            setSelectedFile(e.target.files[0]);
+        } else {
+            setSelectedFile(null);
+        }
+    };
+
+    const handleSubmit = async (e: FormEvent) => {
+        e.preventDefault();
+        setSubmissionMessage(null);
+        setLoading(true);
+
+        let imageUrl: string | undefined = undefined;
+
+        if (selectedFile) {
+            try {
+                // 1. Request a presigned URL from your Lambda
+                const getUrlResponse = await axios.get(
+                    `${API_GATEWAY_ENDPOINT}/get-upload-url?fileName=${selectedFile.name}&fileType=${selectedFile.type}`
+                );
+                const { uploadUrl, objectKey } = getUrlResponse.data;
+
+                // 2. Upload the image directly to S3 using the presigned URL
+                await axios.put(uploadUrl, selectedFile, {
+                    headers: {
+                        'Content-Type': selectedFile.type,
+                    },
+                });
+
+                // 3. Construct the public URL for the uploaded image on S3
+                imageUrl = `https://${S3_BUCKET_NAME}.s3.${AWS_REGION}.amazonaws.com/${objectKey}`;
+                console.log("Image uploaded to S3:", imageUrl);
+
+            } catch (imageUploadError) {
+                console.error("Error uploading image to S3:", imageUploadError);
+                setSubmissionMessage("Failed to upload image.");
+                setLoading(false);
+                return; // Stop if image upload fails
+            }
+        }
+
+			
+Now i have face issue so i will solve it as below steps
+
+1) now go to lambda function
+2) select code
+3) now create folder locally on pc
+4) open folder in vs excecute commands 
+	npm init -y
+	npm install @aws-sdk/client-s3 @aws-sdk/s3-request-presigner @aws-sdk/client-dynamodb @aws-sdk/lib-dynamodb
+	craete one file called index.mjs and remove type : "common.js" from packege.json
+	then make zip of file not the parent zip select all 4 file and then make zip
+5) click on upload from
+6) select zip
+7) upload our zip file
+8) then deploy
